@@ -10,3 +10,6 @@ nRange = highest-lowest
 numTimesteps = 20
 visible =2*nRange*numTimesteps
 hidden = 50
+
+cycles = 200
+samples = 6
