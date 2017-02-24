@@ -9,21 +9,21 @@ class NeuralNet:
     def __init__ (self):
         lowest = midi_manipulation.lowerBound
         highest = midi_manipulation.upperBound
-        nRange = highest-lowest
+        self.nRange = highest-lowest
 
-        self.numTimesteps = 20
-        visible =2*nRange*self.numTimesteps
+        self.numTimesteps = 100
+        self.visible =2*self.nRange*self.numTimesteps
         hidden = 50
 
-        self.cycles = 200
-        self.batch = 100
+        self.cycles = 10000
+        self.batch = 10000
 
         lr = tf.constant (.005, tf.float32)
 
-        self.x = tf.placeholder(tf.float32, [None, visible], name = "x")
-        self.W = tf.Variable(tf.random_normal([visible, hidden], .01), name="W")
+        self.x = tf.placeholder(tf.float32, [None, self.visible], name = "x")
+        self.W = tf.Variable(tf.random_normal([self.visible, hidden], .01), name="W")
         self.bh = tf.Variable(tf.zeros([1,hidden],tf.float32, name="bh"))
-        self.bv = tf.Variable(tf.zeros([1,visible], tf.float32, name="bv"))
+        self.bv = tf.Variable(tf.zeros([1,self.visible], tf.float32, name="bv"))
 
         xSample = self.gibbsSample(1)
 
@@ -53,7 +53,7 @@ class NeuralNet:
     def sample(self, probs):
         return tf.floor(probs+tf.random_uniform(tf.shape(probs),0,1))
 
-    def train (self, trainPath= "Data/", savePath="Data/Models/model.ckpt"):
+    def train (self, trainPath= "Data/Concertos", savePath="Data/Models/model.ckpt"):
         songs = compileCompositions(trainPath)
         with tf.Session () as sess:
             init = tf.global_variables_initializer()
@@ -62,7 +62,7 @@ class NeuralNet:
             for cycle in tqdm(range(self.cycles)):
                 for song in songs:
                     song = np.array(song)
-                    song = song[:int (np.floor(song.shape[0]/self.numTimesteps)*self.numTimesteps)]
+                    song = song[:int (np.floor(song.shape[0]/self.numTimesteps*self.numTimesteps))]
                     song = np.reshape(song, [song.shape[0]/self.numTimesteps, song.shape[1]*self.numTimesteps])
                     for i in range(1,len(song), self.batch):
                         trX = song[i:i+self.batch]
@@ -70,17 +70,21 @@ class NeuralNet:
             path = self.saver.save(sess, savePath)
             print("Saved Model to " + savePath)
 
-    def generateComposition (self, path="Data/Models/model.ckpt"):
+    def generateComposition (self, filename, path="Data/Models/model.ckpt"):
         with tf.Session () as sess:
             self.saver.restore(sess, path)
             print("Restored Model from " + path)
 
-            sample = self.gibbsSample(1).eval(session=sess, feed_dict={x:np.zeros((10,visible))})
+            sample = self.gibbsSample(1).eval(session=sess, feed_dict={self.x:np.zeros((10,self.visible))})
             for i in range (sample.shape[0]):
                 if not any(sample[i,:]):
                     continue
 
-                s = np.reshape(sample[i,:], (numTimesteps, 2*range))
-                midi_manipulation.noteStateMatrixToMidi(S, (str(filename)).format(i))
+                s = np.reshape(sample[i,:], (self.numTimesteps, 2*self.nRange))
+                midi_manipulation.noteStateMatrixToMidi(s, (str(filename)).format(i))
+
 NN = NeuralNet()
-NN.train(trainPath="Data/")
+NN.train(trainPath="Data/Concertos")
+
+for i in range(15):
+    NN.generateComposition("Data/Generated/sample"+str(i))
