@@ -86,5 +86,6 @@ class NeuralNet:
 NN = NeuralNet()
 NN.train(trainPath="Data/Concertos")
 
-for i in range(15):
+print("Generating")
+for i in tqdm(range(15)):
     NN.generateComposition("Data/Generated/sample"+str(i))
